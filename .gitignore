@@ -5,7 +5,6 @@
 __pycache__/
 
 /etc/buildout/development.cfg
-/etc/flask/development.cfg
 
 bin/
 develop-eggs/
