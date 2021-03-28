@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+. etc/.project
+unset PYTHONHOME
+
+_error() {
+    echo $1
+    exit 1
+}
+
+_helper_hr() {
+    if [ -z $2 ]; then
+        ch="="
+    else
+        ch=$2
+    fi
+    printf '%*s' "$1" | tr ' ' "$ch"
+}
+_helper_br() {
+    if [ -z $1 ]; then
+        num=1
+    else
+        num=$1
+    fi
+    printf '%*s' "$num" | tr ' ' "\n"
+}
+
+_python() {
+    interp=$1
+    if [ -z $interp ]; then
+        interp=python
+    fi
+    PY=`which $interp`
+    if [ -z $PY ]; then
+        _error "Invalid python interpreter $PY"
+    fi
+}
+
+help() {
+    echo "Usage:"
+    echo "$0 action <args>"
+}
+
+build() {
+    if [ $# -lt 1 ]; then
+        _error "$0 build <python interpreter> <(development,preview,production):stage>"
+    fi
+
+    _python $1
+    if [ ! -z $2 ]; then
+        STAGE=$2
+    fi
+
+    welcome="Build project '$PROJECT' with stage '$STAGE' (used interpreter: $PY)" && wlen=${#welcome}
+    _helper_br && _helper_hr $wlen
+    printf "\n$welcome\n"
+    _helper_hr $wlen && _helper_br 2
+
+    echo "[buildout]
+extends = etc/buildout/$STAGE.cfg
+index = $index_url" > buildout.cfg
+
+    $PY _sutils/bootstrap.py --buildout-version=$buildout_version --index=$index_url && \
+    ./bin/buildout
+}
+
+config() {
+    if [ ! -z $1 ]; then
+        STAGE=$1
+    fi
+
+    if [ -z $2 ]; then
+        printf "Get configuration for project '$PROJECT' with stage '$STAGE'\n"
+    else
+        if [[ $2 = "init" ]]; then
+            if [ $STAGE = "development" ]; then
+                if [ -f "etc/buildout/development.cfg" ]; then
+                    printf "etc/buildout/development.cfg already exists. Skip.\n"
+                else
+                    printf "Created etc/buildout/development.cfg. OK.\n"
+                    echo "[buildout]
+extends = base.cfg
+
+[Django]
+debug = True
+stage = development" > etc/buildout/development.cfg
+                fi
+
+                if [ -f "etc/django/development.cfg" ]; then
+                    printf "etc/django/development.cfg already exists. Skip.\n"
+                else
+                    printf "Created etc/django/development.cfg. OK.\n"
+                    mkdir -p etc/django
+                    echo "DEBUG = True" > etc/django/development.cfg
+                fi
+            fi
+        fi
+    fi
+}
+
+distfile() {
+    _python $1
+    $PY setup.py sdist > /dev/null >& /dev/null
+    VERSION=`$PY setup.py --version`
+    DISTFILE="$PROJECT-$VERSION.tar.gz"
+    echo $DISTFILE
+}
+
+
+if [ $# -lt 1 ]; then
+    help
+fi
+
+case "$1" in
+    build)
+        build $2 $3
+        ;;
+    config)
+        config $2 $3
+        ;;
+    distfile)
+        distfile $2
+        ;;
+    *)
+        _error "Invalid action $1"
+        ;;
+esac

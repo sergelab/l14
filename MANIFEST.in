@@ -1,0 +1,11 @@
+recursive-include bin *
+recursive-include etc *
+recursive-include eggs *
+recursive-include parts *
+recursive-include _sutils *
+recursive-include src *.html
+recursive-include venv *
+
+include project setup.cfg
+include versioneer.py
+include _sutils/_version.py

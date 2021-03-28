@@ -1,0 +1,6 @@
+PROJECT=djangoprj
+STAGE=development
+
+index_url=https://pypi.org/simple
+
+buildout_version==2.13.1
