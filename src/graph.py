@@ -27,7 +27,7 @@ def get_next_question_id(g: nx.DiGraph):
 # output => question_id
 # POST
 def add_question(g: nx.DiGraph, data: dict):
-    prev_id = g.number_of_nodes()
+    # prev_id = g.number_of_nodes()
     q_id = get_next_question_id(g)
 
     new_data = data
@@ -35,10 +35,25 @@ def add_question(g: nx.DiGraph, data: dict):
 
     g.add_node(q_id, **new_data)
 
-    if prev_id > 0:
-        g.add_edge(prev_id, q_id)
+    next_question_id = data.pop('next', None)
+    if next_question_id:
+        if next_question_id in g.nodes:
+            make_edge(g, q_id, next_question_id)
 
     return q_id
+
+
+def update_question(g: nx.DiGraph, question_id, data:dict):
+    if question_id not in g.nodes:
+        raise Exception(f'Not found question_id = {question_id}')
+
+    data.pop('id', None)
+    next_question_id = data.pop('next', None)
+    nx.set_node_attributes(g, {question_id: data})
+
+    if next_question_id:
+        if next_question_id in g.nodes:
+            make_edge(g, question_id, next_question_id)
 
 
 def make_edge(g: nx.DiGraph, question_id, to_id, answer_id=None) -> bool:
@@ -51,6 +66,9 @@ def make_edge(g: nx.DiGraph, question_id, to_id, answer_id=None) -> bool:
 
     if answer_id and find_answer(g, question_id, answer_id):
         g.add_edge(question_id, to_id, answer_id=answer_id)
+        return True
+    else:
+        g.add_edge(question_id, to_id)
         return True
 
     raise Exception(f'Not found answer_id = {answer_id}')
@@ -139,18 +157,34 @@ def get_question(g: nx.DiGraph, question_id):
 def run():
     g = load()
 
-    q_id = add_question(g, {'title': 'Первый вопрос'})
-    q2_id = add_question(g, {'title': 'Второй вопрос'})
-    q3_id = add_question(g, {'title': 'Третий вопрос'})
-    q4_id = add_question(g, {'title': 'вопрос 4'})
-    q5_id = add_question(g, {'title': 'вопрос 5'})
+    q_id = add_question(g, {'title': 'Что вы пьёте по утрам?'})
 
-    a11 = add_answer(g, q_id, {'title': 'Ответ 1-1'})
-    a12 = add_answer(g, q_id, {'title': 'Ответ 1-2', 'next': q3_id})
-    a13 = add_answer(g, q_id, {'title': 'Ответ 1-3', 'next': q5_id})
+    qq_id = add_question(g, {'title': 'Что едите?'})
 
-    a21 = add_answer(g, q2_id, {'title': 'Ответ 2-1'})
-    a22 = add_answer(g, q2_id, {'title': 'Ответ 2-2'})
+    q2_id = add_question(g, {'title': 'С молоком?', 'next': qq_id})
+    q3_id = add_question(g, {'title': 'Какой?', 'next': qq_id})
+    q4_id = add_question(g, {'title': 'Какой виски предпочитаете?', 'next': qq_id})
+
+    a11 = add_answer(g, q_id, {'title': 'Чай', 'next': q2_id})
+    a12 = add_answer(g, q_id, {'title': 'Кофе', 'next': q3_id})
+    a13 = add_answer(g, q_id, {'title': 'Виски', 'next': q4_id})
+    a13 = add_answer(g, q_id, {'title': 'Ничего'})
+
+    a21 = add_answer(g, q2_id, {'title': 'Да', 'next': qq_id})
+    a22 = add_answer(g, q2_id, {'title': 'Нет', 'next': qq_id})
+
+    a31 = add_answer(g, q3_id, {'title': 'Черный', 'next': qq_id})
+    a31 = add_answer(g, q3_id, {'title': 'Зеленый', 'next': qq_id})
+
+    a41 = add_answer(g, q4_id, {'title': 'Солодовый', 'next': qq_id})
+    a42 = add_answer(g, q4_id, {'title': 'Зерновой', 'next': qq_id})
+    a43 = add_answer(g, q4_id, {'title': 'Купажированный', 'next': qq_id})
+
+    aq1 = add_answer(g, qq_id, {'title': 'Тост'})
+    aq2 = add_answer(g, qq_id, {'title': 'Круассан'})
+    aq3 = add_answer(g, qq_id, {'title': 'Ничего'})
+
+    update_question(g, q_id, {'next': qq_id})
 
     # update_answer(g, 1, 'ac65f37d-97d7-4dd5-b8ce-e3fb8426c9fe', {'title': 'Ответ 1-2 ТЕСТ'})
     # update_answer(g, 2, '1a5b082f-6ab4-4a26-bfa0-0b58858e24d7', {'next': 5})
@@ -170,7 +204,7 @@ def run():
 
     # print(get_question(g, 1))
 
-    # save(g)
+    save(g)
     # Рисуем граф
     import matplotlib.pyplot as plt
     nx.draw_shell(g, with_labels=True)
