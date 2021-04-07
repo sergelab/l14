@@ -37,8 +37,9 @@ class PollsApi:
         if answer_id and self._find_answer(question_id, answer_id):
             self.storage.add_edge(question_id, to_id, answer_id=answer_id)
             return True
-
-        raise Exception(f'Not found answer_id = {answer_id}')
+        else:
+            self.storage.add_edge(question_id, to_id)
+            return True
 
     def get_question(self, question_id):
         if question_id not in self.storage.nodes:
@@ -57,11 +58,12 @@ class PollsApi:
         last_question_id = self.storage.number_of_nodes()
         q_id = self._get_next_question_id()
 
+        next_question_id = data.pop('next', None)
         data.setdefault('answers', [])
         self.storage.add_node(q_id, **data)
 
-        if last_question_id > 0:
-            self.storage.add_edge(last_question_id, q_id)
+        if next_question_id:
+            self._make_edge(q_id, next_question_id)
 
         self._save()
 
@@ -74,8 +76,13 @@ class PollsApi:
             raise Exception(f'Not found question_id = {question_id}')
 
         data.pop('id', None)
+        next_question_id = data.pop('next', None)
 
         nx.set_node_attributes(self.storage, {question_id: data})
+
+        if next_question_id:
+            self._make_edge(q_id, next_question_id)
+
         self._save()
         return self.get_question(question_id)
 
