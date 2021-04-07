@@ -23,6 +23,7 @@ class QuestionSerializer(serializers.Serializer):
 
 class NewQuestion(serializers.Serializer):
     title = serializers.CharField(required=True)
+    next = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         return validated_data
