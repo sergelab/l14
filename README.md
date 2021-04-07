@@ -24,3 +24,8 @@
 ```
 ./bin/django runserver
 ```
+
+
+# API
+
+/api/polls/ — схема методов
